@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Denis Filaferro - Art Collection</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background-color: #050505;
+            color: #fff;
+            overflow-x: hidden;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 0 10px 0;
+            width: 100%;
+            background: #050505;
+            position: relative;
+            z-index: 2000;
+        }
+
+        h1 {
+            color: #d4af37;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+            font-size: 2.5rem;
+            margin-bottom: 5px;
+            font-weight: 300;
+        }
+
+        .subtitle {
+            color: #888;
+            letter-spacing: 4px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .collage-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            height: 95vh; 
+            margin: 120px auto 0 auto;
+        }
+
+        .art-item {
+            position: absolute;
+            background: #111;
+            padding: 12px;
+            border: 1px solid #222;
+            box-shadow: 10px 15px 40px rgba(0,0,0,0.9);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+            text-align: center;
+        }
+
+        .art-item img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #333;
+            cursor: pointer;
+        }
+
+        .art-item:hover {
+            transform: scale(1.05) rotate(0deg) !important;
+            z-index: 1500;
+            border-color: #d4af37;
+        }
+
+        /* NUMERAZIONE QUADRO */
+        .art-number {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(212, 175, 55, 0.92);
+            color: #000;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            padding: 3px 9px;
+            font-family: 'Georgia', serif;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        /* DIMENSIONI QUADRO */
+        .art-dim {
+            margin-top: 12px;
+            color: #999;
+            font-size: 0.8rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            pointer-events: none;
+        }
+
+        /* LIGHTBOX (ZOOM) */
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.93);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 5000;
+            padding: 30px;
+            cursor: zoom-out;
+        }
+        .lightbox.open { display: flex; }
+        .lightbox img {
+            max-width: 90%;
+            max-height: 78vh;
+            border: 1px solid #d4af37;
+            box-shadow: 0 0 60px rgba(0,0,0,0.9);
+            cursor: zoom-out;
+        }
+        .lightbox-caption {
+            color: #d4af37;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            font-size: 0.95rem;
+            margin-top: 22px;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 18px;
+            right: 32px;
+            color: #d4af37;
+            font-size: 2.6rem;
+            line-height: 1;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+        }
+        .lightbox-close:hover { color: #fff; }
+
+        /* INFO / CONTATTI */
+        .info-section {
+            width: 100%;
+            max-width: 700px;
+            margin: 60px auto 70px auto;
+            padding: 40px 30px;
+            text-align: center;
+            border-top: 1px solid #222;
+        }
+        .info-section .creator {
+            color: #d4af37;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            font-size: 1.2rem;
+            margin-bottom: 14px;
+        }
+        .info-section .rent {
+            color: #ccc;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            margin-bottom: 28px;
+            font-style: italic;
+        }
+        .info-section .contacts {
+            color: #888;
+            font-size: 0.95rem;
+            letter-spacing: 2px;
+            line-height: 2;
+        }
+        .info-section .contacts a {
+            color: #d4af37;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        .info-section .contacts a:hover { color: #fff; }
+        .info-section .label {
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 3px;
+            color: #666;
+        }
+
+        /* POSIZIONI DEI QUADRI */
+        .item-1 { width: 270px; top: 0;       left: 1%;   transform: rotate(-5deg); }
+        .item-2 { width: 270px; top: 25px;    left: 26%;  transform: rotate(3deg); }
+        .item-3 { width: 270px; top: 0;       left: 51%;  transform: rotate(-3deg); }
+        .item-4 { width: 270px; top: 25px;    right: 1%;  transform: rotate(6deg); }
+        .item-5 { width: 270px; bottom: 40px; left: 1%;   transform: rotate(4deg); }
+        .item-6 { width: 270px; bottom: 60px; left: 26%;  transform: rotate(-4deg); }
+        .item-7 { width: 270px; bottom: 40px; left: 51%;  transform: rotate(5deg); }
+        .item-8 { width: 270px; bottom: 60px; right: 1%;  transform: rotate(-5deg); }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 1.6rem; letter-spacing: 5px; }
+            .collage-container {
+                height: auto;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 50px;
+                margin-top: 50px;
+            }
+            .art-item {
+                position: relative;
+                width: 90% !important;
+                margin: 0 auto !important;
+                transform: rotate(0deg) !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>DENIS FILAFERRO</h1>
+        <div class="subtitle">Art Collection</div>
+    </div>
+
+    <div class="collage-container">
+        
+        <div class="art-item item-1" data-dim="150 × 82">
+            <img src="https://i.ibb.co/mC52CkJB/Whats-App-Image-2026-03-24-at-20-18-27-1.jpg" alt="Opera 1">
+        </div>
+
+        <div class="art-item item-2" data-dim="150 × 100">
+            <img src="https://i.ibb.co/3mVF2D7c/Whats-App-Image-2026-03-24-at-20-18-26-12.jpg" alt="Opera 2">
+        </div>
+
+        <div class="art-item item-3" data-dim="153 × 100">
+            <img src="https://i.ibb.co/Y7rqm04g/Whats-App-Image-2026-03-24-at-20-18-26-14.jpg" alt="Opera 3">
+        </div>
+
+        <div class="art-item item-4" data-dim="150 × 260">
+            <img src="https://i.ibb.co/nN4q6GM0/Whats-App-Image-2026-03-24-at-20-18-27.jpg" alt="Opera 4">
+        </div>
+
+        <div class="art-item item-5" data-dim="74 × 88">
+            <img src="https://i.ibb.co/HL4ckPCR/Whats-App-Image-2026-03-24-at-20-18-26-1.jpg" alt="Opera 5">
+        </div>
+
+        <div class="art-item item-6" data-dim="103 × 153">
+            <img src="https://i.ibb.co/VpwMJD6K/Whats-App-Image-2026-03-24-at-20-18-26-13.jpg" alt="Opera 6">
+        </div>
+
+        <div class="art-item item-7" data-dim="90 × 70">
+            <img src="https://i.ibb.co/KBpsR3z/Whats-App-Image-2026-03-24-at-20-18-26-8.jpg" alt="Opera 7">
+        </div>
+
+        <div class="art-item item-8" data-dim="74 × 88">
+            <img src="https://i.ibb.co/mxGwLDD/Whats-App-Image-2026-03-24-at-20-18-26.jpg" alt="Opera 8">
+        </div>
+
+    </div>
+
+    <!-- INFO / CONTATTI -->
+    <div class="info-section">
+        <div class="creator">Opere di Denis Filaferro</div>
+        <div class="rent">I quadri sono disponibili a noleggio.</div>
+        <div class="contacts">
+            <div><span class="label">Telefono</span> &nbsp;<a href="tel:+393357050534">335 705 0534</a></div>
+            <div><span class="label">Email</span> &nbsp;<a href="mailto:denisartist@libero.it">denisartist@libero.it</a></div>
+        </div>
+    </div>
+
+    <!-- LIGHTBOX -->
+    <div class="lightbox" id="lightbox">
+        <span class="lightbox-close" id="lightbox-close">&times;</span>
+        <img id="lightbox-img" src="" alt="Opera ingrandita">
+        <div class="lightbox-caption" id="lightbox-caption"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const items = document.querySelectorAll('.art-item');
+            const lightbox = document.getElementById('lightbox');
+            const lightboxImg = document.getElementById('lightbox-img');
+            const lightboxCaption = document.getElementById('lightbox-caption');
+
+            items.forEach(function (item, i) {
+                const num = String(i + 1).padStart(2, '0');
+                const dim = item.getAttribute('data-dim') || '';
+
+                // Badge numerazione
+                const badge = document.createElement('div');
+                badge.className = 'art-number';
+                badge.textContent = num;
+                item.appendChild(badge);
+
+                // Dicitura dimensioni sotto la cornice
+                if (dim) {
+                    const dimEl = document.createElement('div');
+                    dimEl.className = 'art-dim';
+                    dimEl.textContent = dim;
+                    item.appendChild(dimEl);
+                }
+
+                // Click -> zoom
+                const img = item.querySelector('img');
+                img.addEventListener('click', function () {
+                    lightboxImg.src = img.src;
+                    lightboxCaption.textContent = dim
+                        ? 'Quadro N° ' + num + '  ·  ' + dim
+                        : 'Quadro N° ' + num;
+                    lightbox.classList.add('open');
+                });
+            });
+
+            function closeLightbox() {
+                lightbox.classList.remove('open');
+            }
+
+            // Chiudi cliccando ovunque, anche sull'immagine
+            lightbox.addEventListener('click', function () {
+                closeLightbox();
+            });
+
+            // Chiudi con ESC
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeLightbox();
+            });
+        });
+    </script>
+
+</body>
+</html>
