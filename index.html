@@ -104,6 +104,36 @@
             pointer-events: none;
         }
 
+        /* STATO DISPONIBILITA' */
+        .art-status {
+            margin-top: 7px;
+            font-size: 0.72rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            font-weight: bold;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-height: 14px;
+        }
+        .art-status .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .art-status.available { color: #5fd17a; }
+        .art-status.available .dot { background: #5fd17a; box-shadow: 0 0 7px #5fd17a; }
+        .art-status.unavailable { color: #d16a6a; }
+        .art-status.unavailable .dot { background: #d16a6a; box-shadow: 0 0 7px #d16a6a; }
+        .art-status.loading { color: #555; }
+        .art-status.loading .dot { background: #555; }
+
+        /* opacità ridotta per i quadri non disponibili */
+        .art-item.is-unavailable img { opacity: 0.55; filter: grayscale(0.25); }
+
         /* LIGHTBOX (ZOOM) */
         .lightbox {
             position: fixed;
@@ -279,12 +309,21 @@
         <div class="lightbox-caption" id="lightbox-caption"></div>
     </div>
 
+    <!-- ============================================================= -->
+    <!--  SCRIPT 1 — GALLERIA (numeri, misure, zoom).                  -->
+    <!--  NON dipende da Firebase: funziona sempre.                    -->
+    <!-- ============================================================= -->
     <script>
+        // riferimenti globali usati anche dallo script Firebase (Script 2)
+        window.GALLERIA = { statusEls: {}, itemEls: {}, total: 0 };
+
         document.addEventListener('DOMContentLoaded', function () {
             const items = document.querySelectorAll('.art-item');
             const lightbox = document.getElementById('lightbox');
             const lightboxImg = document.getElementById('lightbox-img');
             const lightboxCaption = document.getElementById('lightbox-caption');
+
+            window.GALLERIA.total = items.length;
 
             items.forEach(function (item, i) {
                 const num = String(i + 1).padStart(2, '0');
@@ -304,31 +343,140 @@
                     item.appendChild(dimEl);
                 }
 
-                // Click -> zoom
+                // Stato disponibilità (riempito da Firebase, se disponibile)
+                const statusEl = document.createElement('div');
+                statusEl.className = 'art-status loading';
+                statusEl.innerHTML = '<span class="dot"></span><span class="txt">···</span>';
+                item.appendChild(statusEl);
+
+                window.GALLERIA.statusEls[i + 1] = statusEl;
+                window.GALLERIA.itemEls[i + 1] = item;
+
+                // Click -> zoom (lightbox)
                 const img = item.querySelector('img');
                 img.addEventListener('click', function () {
                     lightboxImg.src = img.src;
-                    lightboxCaption.textContent = dim
+                    const stato = statusEl.classList.contains('available')
+                        ? '·  DISPONIBILE'
+                        : (statusEl.classList.contains('unavailable') ? '·  NON DISPONIBILE' : '');
+                    lightboxCaption.textContent = (dim
                         ? 'Quadro N° ' + num + '  ·  ' + dim
-                        : 'Quadro N° ' + num;
+                        : 'Quadro N° ' + num) + '  ' + stato;
                     lightbox.classList.add('open');
                 });
             });
 
-            function closeLightbox() {
-                lightbox.classList.remove('open');
-            }
-
-            // Chiudi cliccando ovunque, anche sull'immagine
-            lightbox.addEventListener('click', function () {
-                closeLightbox();
-            });
-
-            // Chiudi con ESC
+            function closeLightbox() { lightbox.classList.remove('open'); }
+            lightbox.addEventListener('click', closeLightbox);
             document.addEventListener('keydown', function (e) {
                 if (e.key === 'Escape') closeLightbox();
             });
+
+            // funzione che lo Script 2 (Firebase) userà per aggiornare gli stati
+            window.GALLERIA.applyState = function (num, disponibile) {
+                const el = window.GALLERIA.statusEls[num];
+                const item = window.GALLERIA.itemEls[num];
+                if (!el) return;
+                if (disponibile) {
+                    el.className = 'art-status available';
+                    el.querySelector('.txt').textContent = 'DISPONIBILE';
+                    item.classList.remove('is-unavailable');
+                } else {
+                    el.className = 'art-status unavailable';
+                    el.querySelector('.txt').textContent = 'NON DISPONIBILE';
+                    item.classList.add('is-unavailable');
+                }
+            };
+
+            window.GALLERIA.setMessage = function (txt) {
+                for (let n = 1; n <= window.GALLERIA.total; n++) {
+                    const el = window.GALLERIA.statusEls[n];
+                    if (!el) continue;
+                    el.className = 'art-status loading';
+                    el.querySelector('.txt').textContent = txt;
+                }
+            };
+
+            // avvia Firebase DOPO che la galleria è pronta
+            if (typeof window.AVVIA_FIREBASE === 'function') window.AVVIA_FIREBASE();
         });
+    </script>
+
+    <!-- ============================================================= -->
+    <!--    -->
+    <!--    -->
+    <!-- ============================================================= -->
+    <script>
+        /* ============================================================= */
+        /*                            */
+        /*                  */
+        /*    */
+        /*         */
+        /* ============================================================= */
+        const firebaseConfig = {
+            apiKey: "AIzaSyCiaBBBpIeMVRAg7z5x6rHYShRvQ7JLYHA",
+            authDomain: "arte-ddfb6.firebaseapp.com",
+            databaseURL: "https://arte-ddfb6-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "arte-ddfb6",
+            storageBucket: "arte-ddfb6.firebasestorage.app",
+            messagingSenderId: "335275268489",
+            appId: "1:335275268489:web:7007fe0fa194e3da89e958"
+        };
+        /* ============================================================= */
+
+        // Carica uno script esterno restituendo una Promise (non blocca la pagina)
+        function caricaScript(src) {
+            return new Promise(function (resolve, reject) {
+                const s = document.createElement('script');
+                s.src = src;
+                s.onload = resolve;
+                s.onerror = function () { reject(new Error('Impossibile caricare ' + src)); };
+                document.head.appendChild(s);
+            });
+        }
+
+        // Chiamata dallo Script 1 quando la galleria è pronta
+        window.AVVIA_FIREBASE = function () {
+            const G = window.GALLERIA;
+
+            // se la config è ancora il segnaposto, non tentare nemmeno
+            if (firebaseConfig.apiKey === 'INSERISCI_QUI') {
+                if (G) G.setMessage('CONFIGURA FIREBASE');
+                return;
+            }
+
+            caricaScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js')
+                .then(function () {
+                    return caricaScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js');
+                })
+                .then(function () {
+                    firebase.initializeApp(firebaseConfig);
+                    const db = firebase.database();
+
+                    // Ascolto in tempo reale: ogni modifica dal pannello admin
+                    // si riflette subito qui, senza ricaricare la pagina.
+                    db.ref('quadri').on('value', function (snapshot) {
+                        const data = snapshot.val() || {};
+                        for (let n = 1; n <= G.total; n++) {
+                            const rec = data[n];
+                            const disp = rec ? (rec.disponibile !== false) : true; // default = disponibile
+                            G.applyState(n, disp);
+                        }
+                    }, function (err) {
+                        console.error('Errore lettura Firebase:', err);
+                        G.setMessage('NON CONNESSO');
+                    });
+                })
+                .catch(function (e) {
+                    console.error('Firebase non caricato:', e);
+                    if (G) G.setMessage('NON CONNESSO');
+                });
+        };
+
+        // Se la galleria era già pronta prima di questo script, parti subito
+        if (window.GALLERIA && window.GALLERIA.total > 0 && typeof window.AVVIA_FIREBASE === 'function') {
+            window.AVVIA_FIREBASE();
+        }
     </script>
 
 </body>
